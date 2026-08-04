@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LivroRouteImport } from './routes/livro'
+import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as CapitulosSlugRouteImport } from './routes/capitulos.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,49 @@ const LivroRoute = LivroRouteImport.update({
   path: '/livro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SobreRoute = SobreRouteImport.update({
+  id: '/sobre',
+  path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapitulosSlugRoute = CapitulosSlugRouteImport.update({
+  id: '/capitulos/$slug',
+  path: '/capitulos/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/livro': typeof LivroRoute
+  '/sobre': typeof SobreRoute
+  '/capitulos/$slug': typeof CapitulosSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/livro': typeof LivroRoute
+  '/sobre': typeof SobreRoute
+  '/capitulos/$slug': typeof CapitulosSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/livro': typeof LivroRoute
+  '/sobre': typeof SobreRoute
+  '/capitulos/$slug': typeof CapitulosSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/livro'
+  fullPaths: '/' | '/livro' | '/sobre' | '/capitulos/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/livro'
-  id: '__root__' | '/' | '/livro'
+  to: '/' | '/livro' | '/sobre' | '/capitulos/$slug'
+  id: '__root__' | '/' | '/livro' | '/sobre' | '/capitulos/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LivroRoute: typeof LivroRoute
+  SobreRoute: typeof SobreRoute
+  CapitulosSlugRoute: typeof CapitulosSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +85,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LivroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sobre': {
+      id: '/sobre'
+      path: '/sobre'
+      fullPath: '/sobre'
+      preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capitulos/$slug': {
+      id: '/capitulos/$slug'
+      path: '/capitulos/$slug'
+      fullPath: '/capitulos/$slug'
+      preLoaderRoute: typeof CapitulosSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LivroRoute: LivroRoute,
+  SobreRoute: SobreRoute,
+  CapitulosSlugRoute: CapitulosSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
