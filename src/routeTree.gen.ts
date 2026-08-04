@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AutorRouteImport } from './routes/autor'
+import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as LivroRouteImport } from './routes/livro'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as CapitulosSlugRouteImport } from './routes/capitulos.$slug'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const AutorRoute = AutorRouteImport.update({
   id: '/autor',
   path: '/autor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContatoRoute = ContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LivroRoute = LivroRouteImport.update({
@@ -44,6 +50,7 @@ const CapitulosSlugRoute = CapitulosSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/autor': typeof AutorRoute
+  '/contato': typeof ContatoRoute
   '/livro': typeof LivroRoute
   '/sobre': typeof SobreRoute
   '/capitulos/$slug': typeof CapitulosSlugRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/autor': typeof AutorRoute
+  '/contato': typeof ContatoRoute
   '/livro': typeof LivroRoute
   '/sobre': typeof SobreRoute
   '/capitulos/$slug': typeof CapitulosSlugRoute
@@ -59,21 +67,31 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/autor': typeof AutorRoute
+  '/contato': typeof ContatoRoute
   '/livro': typeof LivroRoute
   '/sobre': typeof SobreRoute
   '/capitulos/$slug': typeof CapitulosSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/autor' | '/livro' | '/sobre' | '/capitulos/$slug'
+  fullPaths:
+    '/' | '/autor' | '/contato' | '/livro' | '/sobre' | '/capitulos/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/autor' | '/livro' | '/sobre' | '/capitulos/$slug'
-  id: '__root__' | '/' | '/autor' | '/livro' | '/sobre' | '/capitulos/$slug'
+  to: '/' | '/autor' | '/contato' | '/livro' | '/sobre' | '/capitulos/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/autor'
+    | '/contato'
+    | '/livro'
+    | '/sobre'
+    | '/capitulos/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AutorRoute: typeof AutorRoute
+  ContatoRoute: typeof ContatoRoute
   LivroRoute: typeof LivroRoute
   SobreRoute: typeof SobreRoute
   CapitulosSlugRoute: typeof CapitulosSlugRoute
@@ -93,6 +111,13 @@ declare module '@tanstack/react-router' {
       path: '/autor'
       fullPath: '/autor'
       preLoaderRoute: typeof AutorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contato': {
+      id: '/contato'
+      path: '/contato'
+      fullPath: '/contato'
+      preLoaderRoute: typeof ContatoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/livro': {
@@ -122,6 +147,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AutorRoute: AutorRoute,
+  ContatoRoute: ContatoRoute,
   LivroRoute: LivroRoute,
   SobreRoute: SobreRoute,
   CapitulosSlugRoute: CapitulosSlugRoute,
