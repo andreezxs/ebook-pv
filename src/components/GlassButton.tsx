@@ -13,18 +13,20 @@ const variants = {
 
 type Variant = keyof typeof variants;
 
+type MotionButtonProps = React.ComponentProps<typeof motion.button>;
+
 export function GlassButton({
   children,
   variant = "primary",
   className = "",
   ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: MotionButtonProps & { variant?: Variant }) {
   return (
     <motion.button
       whileHover={{ scale: 1.035 }}
       whileTap={{ scale: 0.97 }}
       className={`${base} ${variants[variant]} ${className}`}
-      {...(rest as React.ComponentProps<typeof motion.button>)}
+      {...rest}
     >
       {children}
     </motion.button>
