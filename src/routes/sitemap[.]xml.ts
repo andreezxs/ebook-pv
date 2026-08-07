@@ -29,11 +29,23 @@ export const Route = createFileRoute("/sitemap.xml")({
           },
         });
 
-        const { data } = await supabase
-          .from("chapters")
-          .select("slug")
-          .eq("is_published", true)
-          .order("chapter_order", { ascending: true });
+        let chapterEntries: SitemapEntry[] = [];
+
+        try {
+          const { data } = await supabase
+            .from("chapters")
+            .select("slug")
+            .eq("is_published", true)
+            .order("chapter_order", { ascending: true });
+
+          chapterEntries = (data ?? []).map((c) => ({
+            path: `/capitulos/${c.slug}`,
+            changefreq: "monthly" as const,
+            priority: "0.8",
+          }));
+        } catch (error) {
+          console.warn("[Sitemap] failed to load chapters from Supabase, generating sitemap without chapter paths", error);
+        }
 
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
@@ -41,11 +53,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/sobre", changefreq: "monthly", priority: "0.7" },
           { path: "/autor", changefreq: "monthly", priority: "0.6" },
           { path: "/contato", changefreq: "yearly", priority: "0.5" },
-          ...(data ?? []).map((c) => ({
-            path: `/capitulos/${c.slug}`,
-            changefreq: "monthly" as const,
-            priority: "0.8",
-          })),
+          ...chapterEntries,
         ];
 
         const urls = entries.map((e) =>
