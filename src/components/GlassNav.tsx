@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Volume2, VolumeX, BookOpen } from "lucide-react";
+import { Menu, X, Volume2, VolumeX, BookOpen, Lock } from "lucide-react";
 import { useState } from "react";
 import { useAmbientAudio } from "./AmbientAudioProvider";
 import { BOOK } from "@/lib/chapters";
@@ -15,6 +15,14 @@ const links = [
 
 function SoundControl({ compact = false }: { compact?: boolean }) {
   const { playing, volume, toggle, setVolume } = useAmbientAudio();
+
+  const handleVolumeChange = (value: number) => {
+    setVolume(value);
+    if (!playing && value > 0) {
+      toggle();
+    }
+  };
+
   return (
     <div className="flex items-center gap-3">
       <button
@@ -34,7 +42,7 @@ function SoundControl({ compact = false }: { compact?: boolean }) {
           max={0.8}
           step={0.02}
           value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
+          onChange={(e) => handleVolumeChange(Number(e.target.value))}
           className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-white/15 accent-primary"
         />
       </label>
@@ -84,6 +92,13 @@ export function GlassNav() {
         </ul>
 
         <div className="flex items-center gap-2">
+          <Link
+            to="/admin"
+            aria-label="Área privada"
+            className="glass grid h-9 w-9 place-items-center rounded-full text-foreground/85 transition-all duration-300 hover:scale-105 hover:text-primary"
+          >
+            <Lock className="h-4 w-4" />
+          </Link>
           <SoundControl />
           <button
             type="button"

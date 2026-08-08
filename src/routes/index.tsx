@@ -8,7 +8,7 @@ import { chaptersQuery, BOOK } from "@/lib/chapters";
 import { Reveal, PageTransition } from "@/components/Motion";
 import { GlassLink } from "@/components/GlassButton";
 import { ChapterCard } from "@/components/ChapterCard";
-import cover from "@/assets/book-cover.jpg";
+import cover from "@/assets/book-cover.svg";
 
 export const Route = createFileRoute("/")({
   loader: ({ context }) => {
