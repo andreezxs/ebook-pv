@@ -73,7 +73,9 @@ function AdminPage() {
   const [form, setForm] = useState<ChapterForm>(emptyForm());
   const [loading, setLoading] = useState(false);
 
-  const adminPassword = (import.meta.env.VITE_ADMIN_PASSWORD || DEFAULT_PASSWORD).trim();
+  const adminPassword = (
+  import.meta.env["VITE_ADMIN_PASSWORD"] || DEFAULT_PASSWORD
+).trim();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -118,7 +120,7 @@ function AdminPage() {
     }
 
     const payload = {
-      id: form.id || undefined,
+      ...(form.id ? { id: form.id } : {}),
       title: form.title.trim(),
       slug: form.slug.trim() || slugify(form.title),
       chapter_order: Number(form.chapter_order || 1),
