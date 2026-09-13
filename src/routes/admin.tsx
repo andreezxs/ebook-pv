@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { PageTransition } from "@/components/Motion";
-import { supabase } from "@/integrations/supabase/client";
+import { getChapters, saveChapter } from "@/db/chapters.functions";
 
 type ChapterRow = {
   id?: string;
@@ -68,17 +68,20 @@ export const Route = createFileRoute("/admin")({
 function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState("Digite a senha para acessar a área privada.");
+  const [status, setStatus] = useState(
+    "Digite a senha para acessar a área privada.",
+  );
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [form, setForm] = useState<ChapterForm>(emptyForm());
   const [loading, setLoading] = useState(false);
 
   const adminPassword = (
-  import.meta.env["VITE_ADMIN_PASSWORD"] || DEFAULT_PASSWORD
-).trim();
+    import.meta.env["VITE_ADMIN_PASSWORD"] || DEFAULT_PASSWORD
+  ).trim();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
+
     if (stored === "1") {
       setAuthorized(true);
       void loadChapters();
@@ -87,21 +90,40 @@ function AdminPage() {
 
   async function loadChapters() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("chapters")
-      .select("id,title,slug,chapter_order,content,summary,keyword,theme,cover_image,reading_time,published_at,is_published")
-      .order("chapter_order", { ascending: true });
 
-    if (error) {
-      setStatus(`Erro ao carregar capítulos: ${error.message}`);
-    } else {
-      setChapters((data as ChapterRow[]) ?? []);
+    try {
+      const data = await getChapters();
+
+      setChapters(
+        data.map((chapter) => ({
+          id: chapter.id,
+          title: chapter.title ?? "",
+          slug: chapter.slug ?? "",
+          chapter_order: chapter.chapterOrder ?? 1,
+          content: chapter.content ?? "",
+          summary: chapter.summary ?? "",
+          keyword: chapter.keyword ?? "",
+          theme: chapter.theme ?? "",
+          cover_image: chapter.coverImage ?? null,
+          reading_time: chapter.readingTime ?? 4,
+          published_at:
+            chapter.publishedAt?.toISOString() ?? new Date().toISOString(),
+          is_published: chapter.isPublished ?? false,
+        })),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Erro desconhecido";
+
+      setStatus(`Erro ao carregar capítulos: ${message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+
     if (password === adminPassword) {
       localStorage.setItem(STORAGE_KEY, "1");
       setAuthorized(true);
@@ -114,6 +136,7 @@ function AdminPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
     if (!form.title.trim() || !form.content.trim() || !form.summary.trim()) {
       setStatus("Preencha título, resumo e conteúdo antes de salvar.");
       return;
@@ -123,21 +146,28 @@ function AdminPage() {
       ...(form.id ? { id: form.id } : {}),
       title: form.title.trim(),
       slug: form.slug.trim() || slugify(form.title),
-      chapter_order: Number(form.chapter_order || 1),
+      chapterOrder: Number(form.chapter_order || 1),
       content: form.content,
       summary: form.summary,
       keyword: form.keyword.trim() || null,
       theme: form.theme.trim() || null,
-      cover_image: form.cover_image.trim() || null,
-      reading_time: Number(form.reading_time || 4),
-      published_at: form.published_at || new Date().toISOString(),
-      is_published: form.is_published,
+      coverImage: form.cover_image.trim() || null,
+      readingTime: Number(form.reading_time || 4),
+      publishedAt: form.published_at
+        ? new Date(form.published_at)
+        : new Date(),
+      isPublished: form.is_published,
     };
 
-    const { error } = await supabase.from("chapters").upsert(payload, { onConflict: "slug" });
+    try {
+      await saveChapter({
+        data: payload as any,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Erro desconhecido";
 
-    if (error) {
-      setStatus(`Não foi possível salvar: ${error.message}`);
+      setStatus(`Não foi possível salvar: ${message}`);
       return;
     }
 
@@ -168,15 +198,23 @@ function AdminPage() {
       <PageTransition>
         <main className="mx-auto flex min-h-screen max-w-2xl items-center px-4 py-28 sm:px-6">
           <section className="glass-panel w-full rounded-3xl p-8 sm:p-10">
-            <p className="text-[0.66rem] uppercase tracking-[0.3em] text-primary">Área privada</p>
-            <h1 className="mt-4 font-display text-3xl font-semibold">Administração dos textos</h1>
+            <p className="text-[0.66rem] uppercase tracking-[0.3em] text-primary">
+              Área privada
+            </p>
+
+            <h1 className="mt-4 font-display text-3xl font-semibold">
+              Administração dos textos
+            </h1>
+
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Esta área é exclusiva para edição dos capítulos do livro. Defina a senha de acesso no ambiente da aplicação para entrar.
+              Esta área é exclusiva para edição dos capítulos do livro. Defina
+              a senha de acesso no ambiente da aplicação para entrar.
             </p>
 
             <form onSubmit={handleLogin} className="mt-8 space-y-4">
               <label className="block text-sm font-medium">
                 Senha
+
                 <input
                   type="password"
                   value={password}
@@ -207,9 +245,15 @@ function AdminPage() {
         <section className="glass-panel rounded-3xl p-8 sm:p-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[0.66rem] uppercase tracking-[0.3em] text-primary">Área privada</p>
-              <h1 className="mt-2 font-display text-3xl font-semibold">Gerenciar capítulos</h1>
+              <p className="text-[0.66rem] uppercase tracking-[0.3em] text-primary">
+                Área privada
+              </p>
+
+              <h1 className="mt-2 font-display text-3xl font-semibold">
+                Gerenciar capítulos
+              </h1>
             </div>
+
             <button
               type="button"
               onClick={() => {
@@ -225,13 +269,23 @@ function AdminPage() {
 
           <p className="mt-4 text-sm text-muted-foreground">{status}</p>
 
-          <form onSubmit={handleSave} className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <form
+            onSubmit={handleSave}
+            className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
+          >
             <div className="space-y-4">
               <label className="block text-sm font-medium">
                 Título
+
                 <input
                   value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value, slug: form.slug || slugify(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      title: e.target.value,
+                      slug: form.slug || slugify(e.target.value),
+                    })
+                  }
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="Título do capítulo"
                 />
@@ -239,9 +293,15 @@ function AdminPage() {
 
               <label className="block text-sm font-medium">
                 Slug
+
                 <input
                   value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      slug: e.target.value,
+                    })
+                  }
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="slug-do-capitulo"
                 />
@@ -249,19 +309,31 @@ function AdminPage() {
 
               <label className="block text-sm font-medium">
                 Ordem do capítulo
+
                 <input
                   type="number"
                   value={form.chapter_order}
-                  onChange={(e) => setForm({ ...form, chapter_order: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      chapter_order: Number(e.target.value),
+                    })
+                  }
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                 />
               </label>
 
               <label className="block text-sm font-medium">
                 Palavra-chave
+
                 <input
                   value={form.keyword}
-                  onChange={(e) => setForm({ ...form, keyword: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      keyword: e.target.value,
+                    })
+                  }
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="Fio"
                 />
@@ -269,9 +341,15 @@ function AdminPage() {
 
               <label className="block text-sm font-medium">
                 Tema
+
                 <input
                   value={form.theme}
-                  onChange={(e) => setForm({ ...form, theme: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      theme: e.target.value,
+                    })
+                  }
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="Conexões humanas"
                 />
@@ -281,9 +359,15 @@ function AdminPage() {
             <div className="space-y-4">
               <label className="block text-sm font-medium">
                 Resumo
+
                 <textarea
                   value={form.summary}
-                  onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      summary: e.target.value,
+                    })
+                  }
                   className="mt-2 min-h-24 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="Resumo curto"
                 />
@@ -291,9 +375,15 @@ function AdminPage() {
 
               <label className="block text-sm font-medium">
                 Conteúdo
+
                 <textarea
                   value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      content: e.target.value,
+                    })
+                  }
                   className="mt-2 min-h-64 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   placeholder="Texto completo do capítulo"
                 />
@@ -302,10 +392,16 @@ function AdminPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">
                   Tempo de leitura
+
                   <input
                     type="number"
                     value={form.reading_time}
-                    onChange={(e) => setForm({ ...form, reading_time: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        reading_time: Number(e.target.value),
+                      })
+                    }
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-background/70 px-4 py-3 text-sm outline-none"
                   />
                 </label>
@@ -314,7 +410,12 @@ function AdminPage() {
                   <input
                     type="checkbox"
                     checked={form.is_published}
-                    onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        is_published: e.target.checked,
+                      })
+                    }
                   />
                   Publicado
                 </label>
@@ -332,7 +433,10 @@ function AdminPage() {
 
         <section className="glass-panel mt-6 rounded-3xl p-8 sm:p-10">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl font-semibold">Capítulos cadastrados</h2>
+            <h2 className="font-display text-2xl font-semibold">
+              Capítulos cadastrados
+            </h2>
+
             <button
               type="button"
               onClick={() => void loadChapters()}
@@ -352,10 +456,12 @@ function AdminPage() {
               >
                 <span>
                   <span className="font-semibold">{chapter.title}</span>
+
                   <span className="ml-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
                     {chapter.slug}
                   </span>
                 </span>
+
                 <span className="text-sm text-muted-foreground">
                   {chapter.is_published ? "Publicado" : "Rascunho"}
                 </span>

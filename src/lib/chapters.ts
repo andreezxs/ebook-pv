@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
+import { getPublishedChapters } from "@/db/chapters.functions";
 
 export interface Chapter {
   id: string;
@@ -14,9 +15,6 @@ export interface Chapter {
   reading_time: number;
   published_at: string;
 }
-
-const SELECT =
-  "id,title,slug,chapter_order,content,summary,keyword,theme,cover_image,reading_time,published_at";
 
 const FALLBACK_CHAPTERS: Chapter[] = [
   {
@@ -34,7 +32,8 @@ const FALLBACK_CHAPTERS: Chapter[] = [
       "em algum ponto anterior, alguém decidiu não cortar o que unia.\n\n" +
       "Quando o fio se rompe, o mundo não faz barulho. Apenas fica um pouco mais frio. E é por isso que insisto: sustente " +
       "o seu lado. Alguém do outro lado está fazendo o mesmo.",
-    summary: "Sobre os laços que sustentam pessoas mesmo quando ninguém está olhando.",
+    summary:
+      "Sobre os laços que sustentam pessoas mesmo quando ninguém está olhando.",
     keyword: "Fio",
     theme: "Conexões humanas",
     cover_image: null,
@@ -55,7 +54,8 @@ const FALLBACK_CHAPTERS: Chapter[] = [
       "Descobri que o silêncio não é vazio. É um espaço com formato próprio, onde as coisas que evitamos finalmente cabem.\n\n" +
       "Hoje procuro esse espaço de propósito. Poucos minutos, sem nada tocando. É desconfortável. É necessário. É a única sala " +
       "em que consigo escutar minha própria voz sem edição.",
-    summary: "O que resta quando desligamos o barulho que usamos para não nos ouvir.",
+    summary:
+      "O que resta quando desligamos o barulho que usamos para não nos ouvir.",
     keyword: "Silêncio",
     theme: "Excesso e escuta",
     cover_image: null,
@@ -65,21 +65,30 @@ const FALLBACK_CHAPTERS: Chapter[] = [
 ];
 
 export async function fetchChapters(): Promise<Chapter[]> {
-  const { data, error } = await supabase
-    .from("chapters")
-    .select(SELECT)
-    .eq("is_published", true)
-    .order("chapter_order", { ascending: true });
+  try {
+    const data = await getPublishedChapters();
 
-  if (error) {
+    return data.map((chapter) => ({
+      id: chapter.id,
+      title: chapter.title,
+      slug: chapter.slug,
+      chapter_order: chapter.chapterOrder,
+      content: chapter.content,
+      summary: chapter.summary,
+      keyword: chapter.keyword,
+      theme: chapter.theme,
+      cover_image: chapter.coverImage,
+      reading_time: chapter.readingTime,
+      published_at: chapter.publishedAt.toISOString(),
+    }));
+  } catch (error) {
     console.warn(
-      "[Supabase] fetchChapters failed, falling back to local chapter data:",
-      error.message,
+      "[PostgreSQL] fetchChapters failed, falling back to local chapter data:",
+      error instanceof Error ? error.message : error,
     );
+
     return FALLBACK_CHAPTERS;
   }
-
-  return (data ?? []) as Chapter[];
 }
 
 export const chaptersQuery = () =>
@@ -91,11 +100,15 @@ export const chaptersQuery = () =>
 
 export function chapterNeighbors(chapters: Chapter[], slug: string) {
   const index = chapters.findIndex((c) => c.slug === slug);
+
   return {
     index,
     chapter: index >= 0 ? chapters[index] : undefined,
     previous: index > 0 ? chapters[index - 1] : undefined,
-    next: index >= 0 && index < chapters.length - 1 ? chapters[index + 1] : undefined,
+    next:
+      index >= 0 && index < chapters.length - 1
+        ? chapters[index + 1]
+        : undefined,
   };
 }
 
